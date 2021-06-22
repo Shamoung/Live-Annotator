@@ -1,6 +1,6 @@
 # RT Annotator (Real Time Annotator)
 # Shamoun Gergi
-# Recently updated: 17-06-2021
+# Recently updated: 22-06-2021
 
 
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QLabel, \
