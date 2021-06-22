@@ -1,10 +1,14 @@
-# RT Annotator (Real Time Annotator)
-# Shamoun Gergi
-# Recently updated: 22-06-2021
+"""
+
+RT Annotator (Real Time Annotator)
+Shamoun Gergi
+Recently updated: 22-06-2021
+
+"""
 
 
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QLabel, \
-    QSlider, QStyle, QSizePolicy, QFileDialog, QGraphicsView, QSpacerItem, QCheckBox
+    QSlider, QStyle, QSizePolicy, QFileDialog, QSpacerItem, QCheckBox, QComboBox
 import sys
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtMultimediaWidgets import QVideoWidget
@@ -51,6 +55,8 @@ class MplCanvas(FigureCanvas):
 
 
 class Window(QWidget):
+    """ This class is about the main window. An object of this class is namely the window."""
+
     def __init__(self):
         super().__init__()
 
@@ -67,6 +73,7 @@ class Window(QWidget):
         self.show()
 
     def init_ui(self):
+        """ This method is responsible of all the graphical elements, eg. buttons, videoplayer, diagram, widgets, etc."""
 
         # Creats two lists: one for x-values, one for y-valuse
         self.xValues = []
@@ -84,7 +91,8 @@ class Window(QWidget):
         self.openVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
 
         # create "open annotation" button
-        self.openAnnotationBtn = QPushButton(' Open Annotation')
+        self.openAnnotationBtn = QPushButton(' Open Annotation and Video')
+        self.openAnnotationBtn.clicked.connect(self.open_annotation)
         self.openAnnotationBtn.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
 
         # create save button
@@ -128,6 +136,18 @@ class Window(QWidget):
         self.VerticalSlider = QSlider(Qt.Vertical)
         self.VerticalSlider.sliderMoved['int'].connect(self.numLabel.setNum)
 
+        # Create combobox
+        self.comboLabel = QLabel(" Playback speed: ")
+        self.comboLabel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        self.combobox = QComboBox()
+        self.combobox.addItem("0.25")
+        self.combobox.addItem("0.5")
+        self.combobox.addItem("1")
+        self.combobox.addItem("1.25")
+        self.combobox.addItem("1.5")
+        self.combobox.addItem("2")
+        self.combobox.setCurrentIndex(2)
+
         # create label
         self.label = QLabel()
         self.label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
@@ -148,15 +168,10 @@ class Window(QWidget):
         self.pointer, = self.canvas.axes.plot(self.x, self.y, animated=True, lw=2)
 
 
-
-        self.index = count()
-
-        # self.ax = plt.subplots(figsize=(5, 4), dpi=200)
-
         ###############################d#############################################################################
         ############################################################################################################
 
-        # Layout
+        """Layout: """
 
         # create hbox layout (upper horizontal box).
         upper_hbox = QHBoxLayout()
@@ -193,7 +208,10 @@ class Window(QWidget):
         lower_hbox.addWidget(self.stopBtn)
         lower_hbox.addWidget(self.recordLabel)
         lower_hbox.addWidget(self.checkbox)
+        lower_hbox.addWidget(self.comboLabel)
+        lower_hbox.addWidget(self.combobox)
         lower_hbox.addWidget(self.slider)
+
 
         # ---------------------------------------------------------------------------------------
 
@@ -215,13 +233,19 @@ class Window(QWidget):
         self.mediaPlayer.positionChanged.connect(self.position_changed)
         self.mediaPlayer.durationChanged.connect(self.duration_changed)
 
-    def update_line(self, i):
-        # print( time()- self.startTime)
-        # print(self.slider.value())
-        print(self.mediaPlayer.position(), " ms \t \t", self.VerticalSlider.value(), " %")
 
-        # self.xValues.append(next(self.index))
-        # self.xValues.append(1)
+        ###############################d#############################################################################
+        ############################################################################################################
+
+    """ Other methods: """
+
+    def update_line(self, i):
+
+        """ This method updates the graph. It runs every 10 ms"""
+
+        #print(self.mediaPlayer.position(), " ms \t \t", self.VerticalSlider.value(), " %")
+
+
         if self.checkbox.isChecked():
 
             current_position = self.mediaPlayer.position()
@@ -258,7 +282,7 @@ class Window(QWidget):
                         # This if-statement solves a bug. The program has a problem when the current position is 0.
 
 
-                    if self.xValues[position_index + 1] - current_position < 100:
+                    if self.xValues[position_index + 1] - current_position < 500:
 
                         if position_index < (len(self.xValues) - 1):
                             self.xValues.pop(position_index + 1)
@@ -268,6 +292,7 @@ class Window(QWidget):
                                 self.xValues.pop(position_index + 2)
                                 self.yValues.pop(position_index + 2)
 
+
                         # print(self.xValues)
 
         self.line, = self.canvas.axes.plot(self.xValues, self.yValues, '#ff000b')
@@ -276,33 +301,34 @@ class Window(QWidget):
 
         return [self.line]
 
-    def update_pointer(self, i):
 
-        self.pointer, = self.canvas.axes.plot([self.slider.value()], [self.VerticalSlider.value()], '#1dff00')
-        self.show()
-        return [self.pointer]
 
     def open_file(self):
+        """ This method opens a video file and activates the play and save button"""
+
         self.filename, _ = QFileDialog.getOpenFileName(self, "Open Video")
 
         if self.filename != '':
             self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(self.filename)))
             self.playBtn.setEnabled(True)
             self.saveBtn.setEnabled(True)
-            print(self.filename)
 
     def play_video(self):
-        self.startTime = time()
+        """ This method plays a video and shifts between PLAY and PAUSE. It also activates and inactivates different
+        graphical elements"""
+
         if self.mediaPlayer.state() == QMediaPlayer.PlayingState:
             self.mediaPlayer.pause()
             self.ani._stop()
 
 
+            # Enabling all the buttons, the combobox and the checkbox
             self.checkbox.setEnabled(True)
             self.saveBtn.setEnabled(True)
             self.openVideoBtn.setEnabled(True)
             self.openAnnotationBtn.setEnabled(True)
             self.resetBtn.setEnabled(True)
+            self.combobox.setEnabled(True)
 
 
         else:
@@ -310,39 +336,52 @@ class Window(QWidget):
             self.y = np.linspace(0, self.mediaPlayer.duration(), 10)
             self.ani = FuncAnimation(self.canvas.figure, self.update_line, blit=True, interval=10)
 
+            # Disabling all the buttons, the combobox and the checkbox
             self.checkbox.setEnabled(False)
             self.saveBtn.setEnabled(False)
             self.openVideoBtn.setEnabled(False)
             self.openAnnotationBtn.setEnabled(False)
             self.resetBtn.setEnabled(False)
+            self.combobox.setEnabled(False)
+
+            self.mediaPlayer.setPlaybackRate(float(self.combobox.currentText()))
 
 
     def stop_video(self):
-        print(self.xValues)
+        """ This method stops a video. It also activates different graphical elements"""
+
+        #print(self.xValues)
+
+        # Enabling all the buttons, the combobox and the checkbox
         self.checkbox.setEnabled(True)
         self.saveBtn.setEnabled(True)
         self.openVideoBtn.setEnabled(True)
         self.openAnnotationBtn.setEnabled(True)
         self.resetBtn.setEnabled(True)
+        self.combobox.setEnabled(True)
+        self.checkbox.setEnabled(True)
 
 
         if self.mediaPlayer.state() == QMediaPlayer.PlayingState:
             self.mediaPlayer.stop()
             self.ani._stop()
-            self.checkbox.setEnabled(True)
 
         if self.mediaPlayer.state() == QMediaPlayer.PausedState:
             self.mediaPlayer.stop()
-            self.checkbox.setEnabled(True)
         else:
             pass
 
     def reset_annotation(self):
+        """ This method clears the graph. It sets the xValues and yValues to empty lists and stops the video."""
+
         self.xValues = []
         self.yValues = []
         self.stop_video()
 
     def mediastate_changed(self, state):
+        """ This method is responsible of the change between PLAY and PAUSE. The icons of the play-pause-button
+        are shifted here."""
+
         if self.mediaPlayer.state() == QMediaPlayer.PlayingState:
             self.playBtn.setIcon(
                 self.style().standardIcon(QStyle.SP_MediaPause)
@@ -366,6 +405,8 @@ class Window(QWidget):
 
 
     def save_annotation(self):
+        """ This method saves annotation into a csv-file in the same directory"""
+
         with open(self.filename.replace(".mp4",".csv"), "w", newline="\n") as file:
             writer = csv.writer(file)
             writer.writerow(["Time (ms)", "Engagement (%)"])
@@ -375,8 +416,40 @@ class Window(QWidget):
 
         message = QMessageBox()
         message.setWindowTitle("Success!")
-        message.setText("The annotation is saved successfully as a csv-file. It is saved as the same directory as the sourse video file.")
+        message.setText("The annotation is saved successfully as a csv-file. It is saved in the same directory as the source video file.")
         x = message.exec_()  # this will show our messagebox
+
+    def open_annotation(self):
+        """ This method opens a csv-annotation and the video which has the same name"""
+
+        self.annotationFile, _ = QFileDialog.getOpenFileName(self, "Open Annotation")
+
+        self.xValues = []
+        self.yValues = []
+
+        with open(self.annotationFile, newline='') as csvfile:
+            spamreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+
+            for row in spamreader:
+                tempList = row[0].split(",")
+
+
+                # The try-except statements check weather the element is an integer. If it is a string (the title) we continue to the next element.
+                try:
+                    self.xValues.append(int(tempList[0]))
+                    self.yValues.append(int(tempList[1]))
+
+
+                    self.playBtn.setEnabled(True)
+                    self.saveBtn.setEnabled(True)
+
+                    self.filename = self.annotationFile.replace("csv", "mp4")
+                    self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(self.filename)))
+
+                except:
+                    continue
+
+
 
 
     def handle_errors(self):
