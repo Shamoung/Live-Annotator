@@ -2,7 +2,7 @@
 
 RT Annotator (Real Time Annotator)
 Shamoun Gergi
-Recently updated: 22-06-2021
+Recently updated: 23-06-2021
 
 """
 
@@ -18,6 +18,8 @@ from PyQt5.QtWidgets import QMessageBox
 
 import bisect
 from time import *
+
+import keyboard
 
 # import random
 from itertools import count
@@ -75,6 +77,8 @@ class Window(QWidget):
     def init_ui(self):
         """ This method is responsible of all the graphical elements, eg. buttons, videoplayer, diagram, widgets, etc."""
 
+        self.fileOpened = False
+
         # Creats two lists: one for x-values, one for y-valuse
         self.xValues = []
         self.yValues = []
@@ -91,7 +95,7 @@ class Window(QWidget):
         self.openVideoBtn.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
 
         # create "open annotation" button
-        self.openAnnotationBtn = QPushButton(' Open Annotation and Video')
+        self.openAnnotationBtn = QPushButton(' Open csv')
         self.openAnnotationBtn.clicked.connect(self.open_annotation)
         self.openAnnotationBtn.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
 
@@ -101,7 +105,7 @@ class Window(QWidget):
         self.saveBtn.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.saveBtn.setEnabled(False)
 
-        # creat reset button
+        # create reset button
         self.resetBtn = QPushButton(" Clear Annotation")
         self.resetBtn.clicked.connect(self.reset_annotation)
         self.resetBtn.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
@@ -127,7 +131,7 @@ class Window(QWidget):
         self.slider.setRange(0, 0)
         self.slider.sliderMoved.connect(self.set_position)
 
-        # create numLabel. This will review the value of
+        # create numLabel. This will review the value of the vertical slider.sss
         self.numLabel = QLabel("%")
         self.numLabel.setStyleSheet("background-color: white")
         self.numLabel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
@@ -137,16 +141,18 @@ class Window(QWidget):
         self.VerticalSlider.sliderMoved['int'].connect(self.numLabel.setNum)
 
         # Create combobox
-        self.comboLabel = QLabel(" Playback speed: ")
+        self.comboLabel = QLabel(" |   Playback speed: ")
         self.comboLabel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.combobox = QComboBox()
         self.combobox.addItem("0.25")
         self.combobox.addItem("0.5")
+        self.combobox.addItem("0.75")
         self.combobox.addItem("1")
         self.combobox.addItem("1.25")
         self.combobox.addItem("1.5")
+        self.combobox.addItem("1.75")
         self.combobox.addItem("2")
-        self.combobox.setCurrentIndex(2)
+        self.combobox.setCurrentIndex(3)
 
         # create label
         self.label = QLabel()
@@ -234,8 +240,12 @@ class Window(QWidget):
         self.mediaPlayer.durationChanged.connect(self.duration_changed)
 
 
+
         ###############################d#############################################################################
         ############################################################################################################
+
+
+
 
     """ Other methods: """
 
@@ -244,6 +254,10 @@ class Window(QWidget):
         """ This method updates the graph. It runs every 10 ms"""
 
         #print(self.mediaPlayer.position(), " ms \t \t", self.VerticalSlider.value(), " %")
+
+        #self.y = np.linspace(0, self.mediaPlayer.duration(), 10)
+
+
 
 
         if self.checkbox.isChecked():
@@ -282,7 +296,7 @@ class Window(QWidget):
                         # This if-statement solves a bug. The program has a problem when the current position is 0.
 
 
-                    if self.xValues[position_index + 1] - current_position < 500:
+                    if self.xValues[position_index + 1] - current_position < 100:
 
                         if position_index < (len(self.xValues) - 1):
                             self.xValues.pop(position_index + 1)
@@ -291,6 +305,10 @@ class Window(QWidget):
                             if position_index < (len(self.xValues) - 2):
                                 self.xValues.pop(position_index + 2)
                                 self.yValues.pop(position_index + 2)
+
+                                if position_index < (len(self.xValues) - 3):
+                                    self.xValues.pop(position_index + 3)
+                                    self.yValues.pop(position_index + 3)
 
 
                         # print(self.xValues)
@@ -309,9 +327,16 @@ class Window(QWidget):
         self.filename, _ = QFileDialog.getOpenFileName(self, "Open Video")
 
         if self.filename != '':
+            self.fileOpened = True
             self.mediaPlayer.setMedia(QMediaContent(QUrl.fromLocalFile(self.filename)))
             self.playBtn.setEnabled(True)
             self.saveBtn.setEnabled(True)
+
+            keyboard.on_press_key("a", lambda _: self.set_position(self.mediaPlayer.position() - 5000))
+            keyboard.on_press_key("s", lambda _: self.play_video())
+            keyboard.on_press_key("d", lambda _: self.set_position(self.mediaPlayer.position() + 5000))
+
+
 
     def play_video(self):
         """ This method plays a video and shifts between PLAY and PAUSE. It also activates and inactivates different
@@ -333,8 +358,16 @@ class Window(QWidget):
 
         else:
             self.mediaPlayer.play()
-            self.y = np.linspace(0, self.mediaPlayer.duration(), 10)
-            self.ani = FuncAnimation(self.canvas.figure, self.update_line, blit=True, interval=10)
+
+                
+            # Through the formula below, the update time (ms) is depended on the playback speed.
+            # If playback speed is 1 ==> the line updates every 20 ms
+            # If playback speed is 0.25 ==> the line updates every 80 ms
+            # If playback speed is 2 ==> the line updates every 10 ms, etc.
+            interval_value = 20/float(self.combobox.currentText())
+
+
+            self.ani = FuncAnimation(self.canvas.figure, self.update_line, blit=True, interval=interval_value)
 
             # Disabling all the buttons, the combobox and the checkbox
             self.checkbox.setEnabled(False)
@@ -344,7 +377,11 @@ class Window(QWidget):
             self.resetBtn.setEnabled(False)
             self.combobox.setEnabled(False)
 
+            # Playback speed is set to the value of the combobox.
             self.mediaPlayer.setPlaybackRate(float(self.combobox.currentText()))
+
+
+
 
 
     def stop_video(self):
@@ -416,7 +453,7 @@ class Window(QWidget):
 
         message = QMessageBox()
         message.setWindowTitle("Success!")
-        message.setText("The annotation is saved successfully as a csv-file. It is saved in the same directory as the source video file.")
+        message.setText("The annotation is saved successfully as a csv-file. It is saved in the same directory as the source video file. \n \nThe directory is: "+ self.filename.replace(".mp4",".csv"))
         x = message.exec_()  # this will show our messagebox
 
     def open_annotation(self):
