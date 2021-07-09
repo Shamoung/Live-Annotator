@@ -2,7 +2,7 @@
 
 RT Annotator (Real Time Annotator)
 Shamoun Gergi
-Recently updated: 30-06-2021
+Recently updated: 09-07-2021
 
 """
 
@@ -176,7 +176,7 @@ class Window(QWidget):
         self.stopBtn.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
         self.stopBtn.clicked.connect(self.stop_video)
 
-        # create button for record
+        # create cgeckbox for record
         self.recordLabel = QLabel("Record: ")
         self.recordLabel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.checkbox = QCheckBox()
@@ -253,9 +253,6 @@ class Window(QWidget):
 
         # Sets the vertical line that points towards the current position
         self.vline = self.canvas.axes.axvline(x=50, ymin=0, ymax=100, color='gray',linestyle=":")
-
-
-
 
 
 
