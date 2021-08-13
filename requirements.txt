@@ -1,3 +1,2 @@
 matplotlib==3.4.2
-animation==0.0.7
 PyQt5==5.15.4
